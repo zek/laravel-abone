@@ -21,7 +21,7 @@ class CreateSubscriptionFeaturesTable extends Migration
             $table->string('interval');
             $table->timestamps();
 
-            $table->unique(['subscribable_id', 'subscribable_type', 'code']);
+            $table->unique(['subscribable_id', 'subscribable_type', 'code'], 'uniq');
         });
     }
 
