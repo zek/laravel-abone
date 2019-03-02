@@ -225,7 +225,7 @@ class TransactionBuilder
 
             $amount = $this->exchangedAmount($this->amount);
 
-            if (!$amount->equals($this->amount)) {
+            if ($this->amount->isPositive() && !$amount->equals($this->amount)) {
                 $meta['exchanged'] = [
                     'currency' => $this->amount->getCurrency()->getCode(),
                     'amount' => $this->amount->getAmount(),
