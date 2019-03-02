@@ -1,10 +1,10 @@
 
 
 <p align="center">
-<a href="https://travis-ci.org/zek/laravel-abone"><img src="https://travis-ci.org/zek/laravel-abone.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/zek/laravel-abone"><img src="https://poser.pugx.org/zek/laravel-abone/d/total.svg" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/zek/laravel-abone"><img src="https://poser.pugx.org/zek/laravel-abone/v/stable.svg" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/zek/laravel-abone"><img src="https://poser.pugx.org/zek/laravel-abone/license.svg" alt="License"></a>
+<a href="https://travis-ci.com/zek/laravel-abone"><img src="https://travis-ci.com/zek/laravel-abone.svg" alt="Build Status"></a>
+<a href="https://packagist.org/packages/zek/abone"><img src="https://poser.pugx.org/zek/abone/d/total.svg" alt="Total Downloads"></a>
+<a href="https://packagist.org/packages/zek/abone"><img src="https://poser.pugx.org/zek/abone/v/stable.svg" alt="Latest Stable Version"></a>
+<a href="https://packagist.org/packages/zek/abone"><img src="https://poser.pugx.org/zek/abone/license.svg" alt="License"></a>
 </p>
 
 ## Introduction
