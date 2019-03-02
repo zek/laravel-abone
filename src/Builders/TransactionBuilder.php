@@ -11,6 +11,8 @@ use Zek\Abone\Contracts\HasWallets;
 use Zek\Abone\Exceptions\InsufficientFunds;
 use Zek\Abone\Exceptions\InvalidAmount;
 use Zek\Abone\Exceptions\WalletError;
+use Zek\Abone\Models\Transaction;
+use Zek\Abone\Models\Wallet;
 
 class TransactionBuilder
 {
@@ -95,9 +97,10 @@ class TransactionBuilder
     /**
      * Sets a hint fon the transaction.
      *
+     * @param string $hint
      * @return TransactionBuilder
      */
-    public function hint($hint)
+    public function hint(string $hint)
     {
         $this->hint = $hint;
         return $this;
@@ -194,6 +197,14 @@ class TransactionBuilder
 
             if (!$this->force && $balance->isNegative()) {
                 throw new InsufficientFunds('Insufficient funds');
+            }
+
+            if (!$amount->equals($this->amount)) {
+                $meta['exchanged'] = [
+                    'currency' => $this->amount->getCurrency()->getCode(),
+                    'amount' => $this->amount->getAmount(),
+                    'rate' => $this->amount->ratioOf($amount)
+                ];
             }
 
             $transaction = $this->getWallet()->transactions()->create([

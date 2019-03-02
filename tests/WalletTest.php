@@ -86,6 +86,14 @@ class WalletTest extends TestCase
             ->exchange()
             ->credit();
 
+        $this->assertEquals([
+            'exchanged' => [
+                'currency' => 'TRY',
+                'amount' => '400',
+                'rate' => 4,
+            ],
+        ], $transaction->meta);
+
         $this->assertEquals(Money::USD(100), $transaction->amount);
         $this->assertEquals(Money::USD(100), $wallet->balance);
 
