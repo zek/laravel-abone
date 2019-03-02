@@ -90,7 +90,7 @@ class Ability
     /**
      * Get the available uses.
      *
-     * @param null $consumed
+     * @param float|null $consumed
      * @return float
      */
     public function remaining($consumed = null)

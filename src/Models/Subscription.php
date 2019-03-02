@@ -9,18 +9,16 @@ use LogicException;
 use Money\Currency;
 use Money\Money;
 use Zek\Abone\Ability;
-use Zek\Abone\Contracts\Subscribable;
-use Zek\Abone\Contracts\Subscriber;
 use Zek\Abone\Exceptions\SubscriptionError;
 
 /**
  * @property integer id
  * @property boolean cancelled_immediately
- * @property Currency currency
- * @property CarbonInterval interval
+ * @property \Money\Currency currency
+ * @property \Carbon\CarbonInterval interval
  * @property integer renewal_amount
- * @property Subscribable subscribable
- * @property Subscriber subscriber
+ * @property \Zek\Abone\Contracts\Subscribable subscribable
+ * @property \Zek\Abone\Contracts\Subscriber subscriber
  * @property Carbon starts_at
  * @property Carbon ends_at
  * @property Carbon cancelled_at
@@ -356,7 +354,7 @@ class Subscription extends Model
 
     /**
      * @param $interval
-     * @return CarbonInterval
+     * @return \Carbon\CarbonInterval
      */
     public function getIntervalAttribute($interval)
     {
