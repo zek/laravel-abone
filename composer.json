@@ -4,8 +4,8 @@
     "keywords": ["laravel", "wallet", "abone", "subscription"],
     "license": "MIT",
     "support": {
-        "issues": "https://github.com/zek/wallet/issues",
-        "source": "https://github.com/zek/wallet"
+        "issues": "https://github.com/zek/abone/issues",
+        "source": "https://github.com/zek/abone"
     },
     "authors": [
         {
