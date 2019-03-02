@@ -36,7 +36,6 @@ class Abone
      *
      * @param  string $currency
      * @return void
-     * @throws \Exception
      */
     public static function useCurrency($currency)
     {
