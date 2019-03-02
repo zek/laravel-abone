@@ -225,6 +225,14 @@ class TransactionBuilder
 
             $amount = $this->exchangedAmount($this->amount);
 
+            if (!$amount->equals($this->amount)) {
+                $meta['exchanged'] = [
+                    'currency' => $this->amount->getCurrency()->getCode(),
+                    'amount' => $this->amount->getAmount(),
+                    'rate' => $this->amount->ratioOf($amount)
+                ];
+            }
+
             if ($type === 'charge') {
                 $amount = $amount->negative();
             }
@@ -233,14 +241,6 @@ class TransactionBuilder
 
             if (!$this->force && $balance->isNegative()) {
                 throw new InsufficientFunds('Insufficient funds');
-            }
-
-            if (!$amount->equals($this->amount)) {
-                $meta['exchanged'] = [
-                    'currency' => $this->amount->getCurrency()->getCode(),
-                    'amount' => $this->amount->getAmount(),
-                    'rate' => $this->amount->ratioOf($amount)
-                ];
             }
 
             $transaction = $this->getWallet()->transactions()->create([
