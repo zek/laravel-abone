@@ -43,6 +43,11 @@ class Transaction extends Model
     /**
      * @var array
      */
+    protected $hidden = ['reference'];
+
+    /**
+     * @var array
+     */
     protected $casts = [
         'uuid' => 'uuid',
         'confirmed' => 'bool',

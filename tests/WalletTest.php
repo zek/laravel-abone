@@ -6,6 +6,7 @@ use Money\Currency;
 use Money\Money;
 use Zek\Abone\Abone;
 use Zek\Abone\Models\Transaction;
+use Zek\Abone\Models\Wallet;
 use Zek\Abone\Tests\Fixtures\User;
 
 class WalletTest extends TestCase
@@ -47,6 +48,25 @@ class WalletTest extends TestCase
         $this->assertEquals(1, $user->wallets()->count());
         $this->assertEquals(2, $wallet->transactions()->count());
 
+
+    }
+
+    public function test_transfer_balance()
+    {
+        /** @var User $user1 */
+        $user1 = User::find(1);
+
+        /** @var Wallet $wallet */
+        $wallet = User::find(2)->getWallet();
+
+        // credit some money on account
+        $user1->newTransaction(Money::USD(100))->credit();
+        $this->assertEquals(Money::USD(100), $user1->getWallet()->balance);
+
+        // Transfer money
+        $user1->newTransaction(Money::USD(100))->transfer($wallet);
+        $this->assertEquals(Money::USD(0), $user1->getWallet()->balance);
+        $this->assertEquals(Money::USD(100), $wallet->balance);
 
     }
 

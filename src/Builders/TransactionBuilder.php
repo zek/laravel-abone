@@ -158,7 +158,7 @@ class TransactionBuilder
      * Creates a money out transaction.
      *
      * @param array $meta
-     * @return Model|Transaction
+     * @return \Zek\Abone\Models\Transaction
      */
     public function charge(array $meta = [])
     {
@@ -169,7 +169,7 @@ class TransactionBuilder
      * Creates a money entry transaction.
      *
      * @param array $meta
-     * @return Model|Transaction
+     * @return \Zek\Abone\Models\Transaction
      */
     public function credit(array $meta = [])
     {
@@ -177,11 +177,47 @@ class TransactionBuilder
     }
 
     /**
+     * @param Wallet $targetWallet
+     * @param array $meta
+     * @return \Zek\Abone\Models\Transaction
+     */
+    public function transfer(Wallet $targetWallet, array $meta = [])
+    {
+        return DB::transaction(function () use ($meta, $targetWallet) {
+
+            $balance = $this->getWallet()->calculateBalance()->subtract($this->amount);
+
+            if (!$this->force && $balance->isNegative()) {
+                throw new InsufficientFunds('Insufficient funds');
+            }
+
+            /** @var Transaction $credit */
+            $credit = $targetWallet->transactions()->create([
+                'amount' => $this->amount,
+                'processed_at' => $this->at,
+                'confirmed' => $this->confirmed,
+                'meta' => $meta,
+                'hint' => $this->hint ?? 'wallet.transfer',
+            ]);
+            $charge = $this->getWallet()->transactions()->create([
+                'amount' => $this->amount->negative(),
+                'processed_at' => $this->at,
+                'confirmed' => $this->confirmed,
+                'reference' => $credit,
+                'meta' => $meta,
+                'hint' => $this->hint ?? 'wallet.transfer',
+            ]);
+            $credit->reference()->associate($charge)->save();
+            return $charge;
+        });
+    }
+
+    /**
      * Stores transaction in database.
      *
      * @param string $type
      * @param array $meta
-     * @return Transaction
+     * @return \Zek\Abone\Models\Transaction
      */
     protected function store($type, array $meta = [])
     {
@@ -251,10 +287,10 @@ class TransactionBuilder
             return Abone::exchangeMoney($this->amount, $this->getWallet()->currency);
         } else {
             throw new WalletError(sprintf(
-                    'Mismatching currencies %s %s',
-                    $amount->getCurrency(),
-                    $this->getWallet()->currency)
-            );
+                'Mismatching currencies %s %s',
+                $amount->getCurrency(),
+                $this->getWallet()->currency
+            ));
         }
     }
 

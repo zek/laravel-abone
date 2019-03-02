@@ -78,5 +78,10 @@ abstract class TestCase extends BaseTestCase
             'name' => 'Talha Zekeriya Durmuş',
             'password' => bcrypt('123456')
         ]);
+        User::create([
+            'email' => 'testk@test.com',
+            'name' => 'Test Account',
+            'password' => bcrypt('123456')
+        ]);
     }
 }
