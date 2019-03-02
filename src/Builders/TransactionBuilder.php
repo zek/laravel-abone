@@ -109,10 +109,10 @@ class TransactionBuilder
     /**
      * Sets transaction reference.
      *
-     * @param Model $reference
+     * @param Model|null $reference
      * @return TransactionBuilder
      */
-    public function references(Model $reference)
+    public function references(?Model $reference)
     {
         $this->reference = $reference;
         return $this;
