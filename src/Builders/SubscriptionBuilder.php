@@ -206,6 +206,7 @@ class SubscriptionBuilder
         return DB::transaction(function () use ($activeSubscription) {
             $this->subscriber
                 ->newTransaction($activeSubscription->getRenewalPrice())
+                ->hint('subscription.extend')
                 ->exchange($this->exchange)
                 ->wallet($this->wallet)
                 ->references($activeSubscription)
@@ -225,7 +226,6 @@ class SubscriptionBuilder
      */
     public function prorateBasic(Subscription $activeSub)
     {
-
         if ($this->subscribable->getSubscriptionPrice()->lessThan($activeSub->getRenewalPrice())) {
             throw new DowngradeError('New subscription must be higher then current one');
         }
@@ -242,7 +242,7 @@ class SubscriptionBuilder
 
         $activeSub->cancelNow();
 
-        return $this->storeAndCharge($price);
+        return $this->storeAndCharge($price, 'subscription.upgrade');
     }
 
 
@@ -304,14 +304,16 @@ class SubscriptionBuilder
 
     /**
      * @param Money $amount
+     * @param string $hint
      * @return \Zek\Abone\Models\Subscription
      */
-    protected function storeAndCharge(Money $amount)
+    protected function storeAndCharge(Money $amount, $hint = 'subscription.purchase')
     {
-        return DB::transaction(function () use ($amount) {
+        return DB::transaction(function () use ($amount, $hint) {
             $subscription = $this->store();
 
             $this->subscriber->newTransaction($amount)
+                ->hint($hint)
                 ->exchange($this->exchange)
                 ->wallet($this->wallet)
                 ->references($subscription)
