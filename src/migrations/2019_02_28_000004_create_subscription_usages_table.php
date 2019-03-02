@@ -15,7 +15,7 @@ class CreateSubscriptionUsagesTable extends Migration
     {
         Schema::create('subscription_usages', function (Blueprint $table) {
             $table->increments('id');
-            $table->integer('subscription_id');
+            $table->unsignedInteger('subscription_id');
             $table->string('code');
             $table->float('used')->default(0);
             $table->timestamp('valid_until')->nullable();
