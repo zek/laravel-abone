@@ -4,8 +4,8 @@ namespace Zek\Abone\Models;
 
 use Carbon\CarbonInterval;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Zek\Abone\Contracts\Feature;
-use Zek\Abone\Contracts\Subscribable;
 
 /**
  * @property integer id
@@ -37,7 +37,7 @@ class SubscriptionFeature extends Model implements Feature
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\MorphTo
+     * @return MorphTo
      */
     public function subscribable()
     {

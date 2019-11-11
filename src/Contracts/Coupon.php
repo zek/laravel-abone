@@ -17,15 +17,15 @@ interface Coupon
     /**
      * Return a percentage or discount amount as Money
      *
-     * @param Money $price
-     * @param array $options
+     * @param  Money  $price
+     * @param  array  $options
      * @return Money
      */
     public function getDiscountAmount(Money $price, array $options = []): Money;
 
     /**
      * Mark coupon as used
-     * @param array $options
+     * @param  array  $options
      */
     public function markAsUsed(array $options = []): void;
 

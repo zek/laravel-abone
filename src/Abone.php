@@ -5,18 +5,22 @@ namespace Zek\Abone;
 
 use Money\Currency;
 use Money\Money;
-use Zek\Abone\Exceptions\AboneError;
 use Zek\Abone\Exceptions\WalletError;
 
 class Abone
 {
+    /**
+     * The default wallet currency.
+     *
+     * @var array
+     */
+    public static $positiveWords = ['yes', 'y', 'true', 'ok'];
     /**
      * The money converter.
      *
      * @var callable
      */
     protected static $exchangeMoneyUsing;
-
     /**
      * The default wallet currency.
      *
@@ -25,16 +29,9 @@ class Abone
     protected static $currency = 'USD';
 
     /**
-     * The default wallet currency.
-     *
-     * @var array
-     */
-    public static $positiveWords = ['yes', 'y', 'true', 'ok'];
-
-    /**
      * Set the default currency to be used when creating non-existing default wallet.
      *
-     * @param  string $currency
+     * @param  string  $currency
      * @return void
      */
     public static function useCurrency($currency)
@@ -55,7 +52,7 @@ class Abone
     /**
      * Set the custom currency converter.
      *
-     * @param  callable $callback
+     * @param  callable  $callback
      * @return void
      */
     public static function exchangeMoneyUsing(callable $callback)
@@ -66,8 +63,8 @@ class Abone
     /**
      * Format the given amount into a displayable currency.
      *
-     * @param  Money $money
-     * @param Currency $currency
+     * @param  Money  $money
+     * @param  Currency  $currency
      * @return Money
      * @throws WalletError
      */

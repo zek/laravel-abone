@@ -5,6 +5,8 @@ namespace Zek\Abone\Models;
 use Carbon\Carbon;
 use Dyrynda\Database\Support\GeneratesUuid;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Money\Currency;
 use Money\Money;
@@ -72,7 +74,7 @@ class Transaction extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\MorphTo
+     * @return MorphTo
      */
     public function reference()
     {
@@ -80,7 +82,7 @@ class Transaction extends Model
     }
 
     /**
-     * @param Model $model
+     * @param  Model  $model
      */
     public function setReferenceAttribute(?Model $model)
     {
@@ -94,7 +96,7 @@ class Transaction extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo|Wallet
+     * @return BelongsTo|Wallet
      */
     public function wallet()
     {
@@ -111,12 +113,20 @@ class Transaction extends Model
     }
 
     /**
-     * @param Money $money
+     * @param  Money  $money
      */
     public function setAmountAttribute(Money $money)
     {
         $this->attributes['amount'] = $money->getAmount();
         $this->setCurrencyAttribute($money->getCurrency());
+    }
+
+    /**
+     * @param  Currency  $currency
+     */
+    public function setCurrencyAttribute(Currency $currency)
+    {
+        $this->attributes['currency'] = $currency->getCode();
     }
 
     /**
@@ -126,14 +136,6 @@ class Transaction extends Model
     public function getCurrencyAttribute($currency)
     {
         return new Currency($currency);
-    }
-
-    /**
-     * @param Currency $currency
-     */
-    public function setCurrencyAttribute(Currency $currency)
-    {
-        $this->attributes['currency'] = $currency->getCode();
     }
 
 }

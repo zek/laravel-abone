@@ -28,8 +28,8 @@ class Ability
     /**
      * Create a new Subscription instance.
      *
-     * @param Subscription $subscription
-     * @param string $code
+     * @param  Subscription  $subscription
+     * @param  string  $code
      */
     public function __construct(Subscription $subscription, ?string $code = null)
     {
@@ -41,9 +41,19 @@ class Ability
 
     public function __toString()
     {
-        return (string)$this->value();
+        return (string) $this->value();
     }
 
+    /**
+     * Get feature value.
+     *
+     * @param  mixed  $default
+     * @return mixed
+     */
+    public function value($default = null)
+    {
+        return optional($this->value)->getValue() ?? $default;
+    }
 
     /**
      * Determine if the feature is enabled and has
@@ -64,38 +74,11 @@ class Ability
         // If the feature value is zero, let's return false
         // since there's no uses available. (useful to disable
         // countable features)
-        if ((float)$feature_value == 0) {
+        if ((float) $feature_value == 0) {
             return false;
         }
         // Check for available uses
         return $this->remaining() > 0;
-    }
-
-    /**
-     * Get how many times the feature has been used.
-     *
-     * @param bool $value
-     * @return float
-     */
-    public function consumed($value = true)
-    {
-        $record = $this->subscription->usages()->code($this->code)->valid()->orderBy('id', 'desc')->first();
-        if ($value) {
-            return optional($record)->used;
-        } else {
-            return $record;
-        }
-    }
-
-    /**
-     * Get the available uses.
-     *
-     * @param float|null $consumed
-     * @return float
-     */
-    public function remaining($consumed = null)
-    {
-        return (float)$this->value() - ($consumed ?? (float)$this->consumed());
     }
 
     /**
@@ -117,19 +100,35 @@ class Ability
     }
 
     /**
-     * Get feature value.
+     * Get the available uses.
      *
-     * @param  mixed $default
-     * @return mixed
+     * @param  float|null  $consumed
+     * @return float
      */
-    public function value($default = null)
+    public function remaining($consumed = null)
     {
-        return optional($this->value)->getValue() ?? $default;
+        return (float) $this->value() - ($consumed ?? (float) $this->consumed());
     }
 
     /**
-     * @param float $amount
-     * @param bool $incremental
+     * Get how many times the feature has been used.
+     *
+     * @param  bool  $value
+     * @return float
+     */
+    public function consumed($value = true)
+    {
+        $record = $this->subscription->usages()->code($this->code)->valid()->orderBy('id', 'desc')->first();
+        if ($value) {
+            return optional($record)->used;
+        } else {
+            return $record;
+        }
+    }
+
+    /**
+     * @param  float  $amount
+     * @param  bool  $incremental
      * @return float
      */
     public function use(float $amount = 0, $incremental = true)
@@ -155,7 +154,7 @@ class Ability
     }
 
     /**
-     * @param float $amount
+     * @param  float  $amount
      * @return float|boolean
      */
     public function return(float $amount = 0)

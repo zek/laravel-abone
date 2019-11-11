@@ -17,7 +17,7 @@ class BasicFeature implements Feature
     /**
      * @param $code
      * @param $value
-     * @param null $interval
+     * @param  null  $interval
      */
     public function __construct($code, $value, $interval = null)
     {

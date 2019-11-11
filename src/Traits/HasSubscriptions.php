@@ -5,8 +5,8 @@ namespace Zek\Abone\Traits;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Zek\Abone\Builders\SubscriptionBuilder;
-use Zek\Abone\Exceptions\SubscriptionError;
 use Zek\Abone\Contracts\Subscribable as SubscribableContract;
+use Zek\Abone\Exceptions\SubscriptionError;
 use Zek\Abone\Models\Subscription;
 
 trait HasSubscriptions
@@ -14,8 +14,8 @@ trait HasSubscriptions
     /**
      * Begin creating a new subscription.
      *
-     * @param SubscribableContract $subscribable
-     * @return \Zek\Abone\Builders\SubscriptionBuilder
+     * @param  SubscribableContract  $subscribable
+     * @return SubscriptionBuilder
      */
     public function newSubscription(SubscribableContract $subscribable)
     {
@@ -28,10 +28,39 @@ trait HasSubscriptions
     }
 
     /**
+     * Determine if the model has a given subscription.
+     *
+     * @param  string|Model|SubscribableContract  $subscribable
+     * @return bool|int
+     * @throws SubscriptionError
+     */
+    public function subscribed($subscribable)
+    {
+        $subscription = $this->subscription($subscribable);
+
+        if (is_null($subscription)) {
+            return false;
+        }
+
+        if (is_string($subscribable)) {
+            if ($subscribable::$multipleSubscriptions ?? false) {
+                return $subscription->filter(function ($value) {
+                    return $value->active();
+                })->count();
+            } else {
+                return !is_null($subscription);
+            }
+        }
+
+        return $subscription->active() &&
+            (string) $subscription->subscribable_id === (string) $subscribable->getKey();
+    }
+
+    /**
      * Get a subscription instance by class name.
      *
-     * @param  string $subscribable
-     * @return \Zek\Abone\Models\Subscription|Collection|null
+     * @param  string  $subscribable
+     * @return Subscription|Collection|null
      * @throws SubscriptionError
      */
     public function subscription($subscribable = null)
@@ -59,35 +88,6 @@ trait HasSubscriptions
         }
 
         return $subscriptions->first();
-    }
-
-    /**
-     * Determine if the model has a given subscription.
-     *
-     * @param  string|Model|SubscribableContract $subscribable
-     * @return bool|int
-     * @throws SubscriptionError
-     */
-    public function subscribed($subscribable)
-    {
-        $subscription = $this->subscription($subscribable);
-
-        if (is_null($subscription)) {
-            return false;
-        }
-
-        if (is_string($subscribable)) {
-            if ($subscribable::$multipleSubscriptions ?? false) {
-                return $subscription->filter(function ($value) {
-                    return $value->active();
-                })->count();
-            } else {
-                return !is_null($subscription);
-            }
-        }
-
-        return $subscription->active() &&
-            (string)$subscription->subscribable_id === (string)$subscribable->getKey();
     }
 
 }

@@ -2,7 +2,6 @@
 
 namespace Zek\Abone\Traits;
 
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Zek\Abone\Models\SubscriptionFeature;
 

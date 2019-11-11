@@ -3,7 +3,9 @@
 namespace Zek\Abone\Exceptions;
 
 
-class AboneError extends \Exception
+use Exception;
+
+class AboneError extends Exception
 {
 
 }

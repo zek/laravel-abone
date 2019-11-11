@@ -3,6 +3,8 @@
 namespace Zek\Abone\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Money\Currency;
 use Money\Money;
 use Zek\Abone\Contracts\HasWallets;
@@ -25,7 +27,7 @@ class Wallet extends Model
     /**
      * Get morphed model.
      *
-     * @return \Illuminate\Database\Eloquent\Relations\MorphTo
+     * @return MorphTo
      */
     public function owner()
     {
@@ -33,7 +35,7 @@ class Wallet extends Model
     }
 
     /**
-     * @param Currency $currency
+     * @param  Currency  $currency
      */
     public function setCurrencyAttribute(Currency $currency)
     {
@@ -49,16 +51,6 @@ class Wallet extends Model
         return new Currency($currency);
     }
 
-
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function transactions()
-    {
-        return $this->hasMany(Transaction::class);
-    }
-
-
     /**
      * @return Money
      */
@@ -68,16 +60,6 @@ class Wallet extends Model
             $this->calculateBalance();
         }
         return self::$_balances[$this->id];
-    }
-
-    /**
-     * @param Money $money
-     */
-    public function setBalanceAttribute(Money $money)
-    {
-        self::$_balances[$this->id] = $money;
-        $this->attributes['balance'] = $money->getAmount();
-        $this->save();
     }
 
     /**
@@ -93,6 +75,24 @@ class Wallet extends Model
         $this->save();
         $this->setBalanceAttribute(new Money($balance, $this->currency));
         return $this->getBalanceAttribute();
+    }
+
+    /**
+     * @return HasMany
+     */
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class);
+    }
+
+    /**
+     * @param  Money  $money
+     */
+    public function setBalanceAttribute(Money $money)
+    {
+        self::$_balances[$this->id] = $money;
+        $this->attributes['balance'] = $money->getAmount();
+        $this->save();
     }
 
 }

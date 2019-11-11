@@ -76,8 +76,8 @@ class SubscriptionBuilder
     /**
      * Create a new subscription builder instance.
      *
-     * @param SubscriberContract $subscriber
-     * @param SubscribableContract $subscribable
+     * @param  SubscriberContract  $subscriber
+     * @param  SubscribableContract  $subscribable
      */
     public function __construct(SubscriberContract $subscriber, SubscribableContract $subscribable)
     {
@@ -89,7 +89,7 @@ class SubscriptionBuilder
     /**
      * The coupon to apply to a new subscription.
      *
-     * @param  CouponContract $coupon
+     * @param  CouponContract  $coupon
      * @return $this
      */
     public function withCoupon(CouponContract $coupon)
@@ -102,7 +102,7 @@ class SubscriptionBuilder
     /**
      * Convert currency if currency exchange
      *
-     * @param bool $exchange
+     * @param  bool  $exchange
      * @return $this
      */
     public function exchange($exchange = true)
@@ -112,7 +112,7 @@ class SubscriptionBuilder
     }
 
     /**
-     * @param string|null $wallet
+     * @param  string|null  $wallet
      * @return $this
      */
     public function wallet(string $wallet = null)
@@ -124,7 +124,7 @@ class SubscriptionBuilder
     /**
      * The metadata to apply to a new subscription.
      *
-     * @param  array $metadata
+     * @param  array  $metadata
      * @return $this
      */
     public function withMetadata($metadata)
@@ -137,7 +137,7 @@ class SubscriptionBuilder
     /**
      * Sets subscription starting date.
      *
-     * @param \Carbon\Carbon $starts_at
+     * @param  Carbon  $starts_at
      * @return $this
      */
     public function startsAt(Carbon $starts_at)
@@ -163,7 +163,7 @@ class SubscriptionBuilder
     /**
      * Create a new Subscription.
      *
-     * @return \Zek\Abone\Models\Subscription
+     * @return Subscription
      * @throws SubscriptionError
      */
     public function create()
@@ -185,7 +185,7 @@ class SubscriptionBuilder
         $class_name = get_class($this->subscribable);
 
         if ($activeSubscription && !($class_name::$multipleSubscriptions ?? false)) {
-            $method = Str::camel('prorate_' . ($class_name::$subscriptionProrate ?? 'basic'));
+            $method = Str::camel('prorate_'.($class_name::$subscriptionProrate ?? 'basic'));
             return call_user_func([$this, $method], $activeSubscription);
         }
         $price = $this->getDiscountedPrice();
@@ -193,61 +193,46 @@ class SubscriptionBuilder
     }
 
     /**
-     * @return Subscription
-     * @throws SubscriptionError
+     * @return Money
      */
-    public function extend()
+    public function getDiscountedPrice()
     {
-        $activeSubscription = $this->subscriber->subscription($this->subscribable);
-        if (!$activeSubscription || !$activeSubscription->exists()) {
-            throw new SubscriptionError('Invalid subscription');
+        $price = $this->subscribable->getSubscriptionPrice();
+        if ($this->coupon) {
+            $price = $price->subtract(
+                $this->coupon->getDiscountAmount($price, [
+                    'subscribable' => $this->subscribable,
+                    'subscriber' => $this->subscriber,
+                ])
+            );
         }
+        return $price;
+    }
 
-        return DB::transaction(function () use ($activeSubscription) {
-            $this->subscriber
-                ->newTransaction($activeSubscription->getRenewalPrice())
-                ->hint('subscription.extend')
+    /**
+     * @param  Money  $amount
+     * @param  string  $hint
+     * @return Subscription
+     */
+    protected function storeAndCharge(Money $amount, $hint = 'subscription.purchase')
+    {
+        return DB::transaction(function () use ($amount, $hint) {
+            $subscription = $this->store();
+
+            $this->subscriber->newTransaction($amount)
+                ->hint($hint)
                 ->exchange($this->exchange)
                 ->wallet($this->wallet)
-                ->references($activeSubscription)
+                ->references($subscription)
                 ->charge();
 
-            $activeSubscription->ends_at = $activeSubscription->ends_at
-                ->add($activeSubscription->interval);
-            $activeSubscription->save();
-            return $activeSubscription;
+            return $subscription;
+
         });
     }
 
     /**
-     * @param Subscription $activeSub
-     * @return \Zek\Abone\Models\Subscription
-     * @throws DowngradeError
-     */
-    public function prorateBasic(Subscription $activeSub)
-    {
-        if ($this->subscribable->getSubscriptionPrice()->lessThan($activeSub->getRenewalPrice())) {
-            throw new DowngradeError('New subscription must be higher then current one');
-        }
-
-        $usageLeft = $activeSub->usageLeft();
-        $refundDiscount = $activeSub->lastPaid()->multiply($usageLeft);
-
-        $price = $this->getDiscountedPrice();
-        if ($refundDiscount->greaterThanOrEqual($price)) {
-            $price = $price->multiply(0);
-        } else {
-            $price = $price->subtract($refundDiscount);
-        }
-
-        $activeSub->cancelNow();
-
-        return $this->storeAndCharge($price, 'subscription.upgrade');
-    }
-
-
-    /**
-     * @return \Zek\Abone\Models\Subscription
+     * @return Subscription
      */
     protected function store()
     {
@@ -284,44 +269,57 @@ class SubscriptionBuilder
         return $subscription;
     }
 
-
     /**
-     * @return Money
+     * @return Subscription
+     * @throws SubscriptionError
      */
-    public function getDiscountedPrice()
+    public function extend()
     {
-        $price = $this->subscribable->getSubscriptionPrice();
-        if ($this->coupon) {
-            $price = $price->subtract(
-                $this->coupon->getDiscountAmount($price, [
-                    'subscribable' => $this->subscribable,
-                    'subscriber' => $this->subscriber,
-                ])
-            );
+        $activeSubscription = $this->subscriber->subscription($this->subscribable);
+        if (!$activeSubscription || !$activeSubscription->exists()) {
+            throw new SubscriptionError('Invalid subscription');
         }
-        return $price;
+
+        return DB::transaction(function () use ($activeSubscription) {
+            $this->subscriber
+                ->newTransaction($activeSubscription->getRenewalPrice())
+                ->hint('subscription.extend')
+                ->exchange($this->exchange)
+                ->wallet($this->wallet)
+                ->references($activeSubscription)
+                ->charge();
+
+            $activeSubscription->ends_at = $activeSubscription->ends_at
+                ->add($activeSubscription->interval);
+            $activeSubscription->save();
+            return $activeSubscription;
+        });
     }
 
     /**
-     * @param Money $amount
-     * @param string $hint
-     * @return \Zek\Abone\Models\Subscription
+     * @param  Subscription  $activeSub
+     * @return Subscription
+     * @throws DowngradeError
      */
-    protected function storeAndCharge(Money $amount, $hint = 'subscription.purchase')
+    public function prorateBasic(Subscription $activeSub)
     {
-        return DB::transaction(function () use ($amount, $hint) {
-            $subscription = $this->store();
+        if ($this->subscribable->getSubscriptionPrice()->lessThan($activeSub->getRenewalPrice())) {
+            throw new DowngradeError('New subscription must be higher then current one');
+        }
 
-            $this->subscriber->newTransaction($amount)
-                ->hint($hint)
-                ->exchange($this->exchange)
-                ->wallet($this->wallet)
-                ->references($subscription)
-                ->charge();
+        $usageLeft = $activeSub->usageLeft();
+        $refundDiscount = $activeSub->lastPaid()->multiply($usageLeft);
 
-            return $subscription;
+        $price = $this->getDiscountedPrice();
+        if ($refundDiscount->greaterThanOrEqual($price)) {
+            $price = $price->multiply(0);
+        } else {
+            $price = $price->subtract($refundDiscount);
+        }
 
-        });
+        $activeSub->cancelNow();
+
+        return $this->storeAndCharge($price, 'subscription.upgrade');
     }
 
 }

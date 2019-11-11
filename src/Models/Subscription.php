@@ -4,21 +4,26 @@ namespace Zek\Abone\Models;
 
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use LogicException;
 use Money\Currency;
 use Money\Money;
 use Zek\Abone\Ability;
+use Zek\Abone\Contracts\Subscribable;
+use Zek\Abone\Contracts\Subscriber;
 use Zek\Abone\Exceptions\SubscriptionError;
 
 /**
  * @property integer id
  * @property boolean cancelled_immediately
- * @property \Money\Currency currency
- * @property \Carbon\CarbonInterval interval
+ * @property Currency currency
+ * @property CarbonInterval interval
  * @property integer renewal_amount
- * @property \Zek\Abone\Contracts\Subscribable subscribable
- * @property \Zek\Abone\Contracts\Subscriber subscriber
+ * @property Subscribable subscribable
+ * @property Subscriber subscriber
  * @property Carbon starts_at
  * @property Carbon ends_at
  * @property Carbon cancelled_at
@@ -58,7 +63,7 @@ class Subscription extends Model
     /**
      * Get the user that owns the subscription.
      *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
     public function subscriber()
     {
@@ -69,7 +74,7 @@ class Subscription extends Model
     /**
      * Get the model subscribed.
      *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
     public function subscribable()
     {
@@ -77,7 +82,7 @@ class Subscription extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * @return HasMany
      */
     public function usages()
     {
@@ -85,7 +90,7 @@ class Subscription extends Model
     }
 
     /**
-     * @param bool $full
+     * @param  bool  $full
      * @return mixed
      * @throws SubscriptionError
      */
@@ -106,61 +111,6 @@ class Subscription extends Model
         $this->cancelNow();
 
         return $amount;
-    }
-
-    public function ability($name)
-    {
-        return new Ability($this, $name);
-    }
-
-    /**
-     * Cancel the subscription at the end of the billing period.
-     *
-     * @return $this
-     */
-    public function cancel()
-    {
-        $this->fill(['cancelled_at' => Carbon::now()])->save();
-
-        return $this;
-    }
-
-    /**
-     * Cancel the subscription immediately.
-     *
-     * @return $this
-     */
-    public function cancelNow()
-    {
-        $this->fill([
-            'ends_at' => Carbon::now(),
-            'cancelled_at' => Carbon::now(),
-            'cancelled_immediately' => true,
-        ])->save();
-
-        return $this;
-    }
-
-    public function transactions()
-    {
-        return $this->morphMany(Transaction::class, 'reference');
-    }
-
-    /**
-     * Resume the cancelled subscription.
-     *
-     * @return $this
-     * @throws \LogicException
-     */
-    public function resume()
-    {
-        if (!$this->onGracePeriod()) {
-            throw new LogicException('Unable to resume subscription that is not within grace period.');
-        }
-
-        $this->fill(['cancelled_at' => null])->save();
-
-        return $this;
     }
 
     /**
@@ -184,13 +134,90 @@ class Subscription extends Model
     }
 
     /**
-     * Determine if the subscription has ended and the grace period has expired.
-     *
-     * @return bool
+     * @return Money
      */
-    public function ended()
+    public function lastPaid()
     {
-        return $this->cancelled() && !$this->onGracePeriod();
+        return $this->transactions()->where('amount', '<=', 0)->orderByDesc('id')->first()->amount->absolute();
+    }
+
+    public function transactions()
+    {
+        return $this->morphMany(Transaction::class, 'reference');
+    }
+
+    /**
+     * @return float|int
+     */
+    public function usageLeft()
+    {
+        return ($this->interval->totalDays - $this->getDaysUsed()) / $this->interval->totalDays;
+    }
+
+    /**
+     * @return int
+     */
+    public function getDaysUsed()
+    {
+        if ($this->starts_at->isFuture()) {
+            return 0;
+        } else {
+            if (is_null($this->ends_at)) {
+                return $this->starts_at->diffInDays();
+            } else {
+                return $this->ends_at->sub($this->interval)->diffInDays();
+            }
+        }
+    }
+
+    /**
+     * Cancel the subscription immediately.
+     *
+     * @return $this
+     */
+    public function cancelNow()
+    {
+        $this->fill([
+            'ends_at' => Carbon::now(),
+            'cancelled_at' => Carbon::now(),
+            'cancelled_immediately' => true,
+        ])->save();
+
+        return $this;
+    }
+
+    public function ability($name)
+    {
+        return new Ability($this, $name);
+    }
+
+    /**
+     * Cancel the subscription at the end of the billing period.
+     *
+     * @return $this
+     */
+    public function cancel()
+    {
+        $this->fill(['cancelled_at' => Carbon::now()])->save();
+
+        return $this;
+    }
+
+    /**
+     * Resume the cancelled subscription.
+     *
+     * @return $this
+     * @throws LogicException
+     */
+    public function resume()
+    {
+        if (!$this->onGracePeriod()) {
+            throw new LogicException('Unable to resume subscription that is not within grace period.');
+        }
+
+        $this->fill(['cancelled_at' => null])->save();
+
+        return $this;
     }
 
     /**
@@ -204,13 +231,13 @@ class Subscription extends Model
     }
 
     /**
-     * Determine if the subscription is recurring.
+     * Determine if the subscription has ended and the grace period has expired.
      *
      * @return bool
      */
-    public function recurring()
+    public function ended()
     {
-        return !$this->cancelled() && ($this->active() || $this->onFuture());
+        return $this->cancelled() && !$this->onGracePeriod();
     }
 
     /**
@@ -221,6 +248,16 @@ class Subscription extends Model
     public function cancelled()
     {
         return !is_null($this->cancelled_at) || !$this->ends_at->isFuture();
+    }
+
+    /**
+     * Determine if the subscription is recurring.
+     *
+     * @return bool
+     */
+    public function recurring()
+    {
+        return !$this->cancelled() && ($this->active() || $this->onFuture());
     }
 
     public function setCurrencyAttribute(Currency $currency)
@@ -242,7 +279,7 @@ class Subscription extends Model
     }
 
     /**
-     * @param Money $money
+     * @param  Money  $money
      * @return $this
      */
     public function setRenewalAmount(Money $money)
@@ -254,7 +291,7 @@ class Subscription extends Model
     /**
      * Filter query by recurring.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder $query
+     * @param  Builder  $query
      * @return void
      */
     public function scopeRecurring($query)
@@ -264,11 +301,10 @@ class Subscription extends Model
         });
     }
 
-
     /**
      * Filter query by active.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder $query
+     * @param  Builder  $query
      * @return void
      */
     public function scopeActive($query)
@@ -282,7 +318,7 @@ class Subscription extends Model
     /**
      * Filter query by active.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder $query
+     * @param  Builder  $query
      * @return void
      */
     public function scopeFuture($query)
@@ -290,11 +326,10 @@ class Subscription extends Model
         $query->where('starts_at', '>', Carbon::now());
     }
 
-
     /**
      * Filter query by on grace period.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder $query
+     * @param  Builder  $query
      * @return void
      */
     public function scopeOnGracePeriod($query)
@@ -305,7 +340,7 @@ class Subscription extends Model
     /**
      * Filter query by not on grace period.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder $query
+     * @param  Builder  $query
      * @return void
      */
     public function scopeNotOnGracePeriod($query)
@@ -316,7 +351,7 @@ class Subscription extends Model
     /**
      * Filter query by cancelled.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder $query
+     * @param  Builder  $query
      * @return void
      */
     public function scopeCancelled($query)
@@ -329,7 +364,7 @@ class Subscription extends Model
     /**
      * Filter query by not cancelled.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder $query
+     * @param  Builder  $query
      * @return void
      */
     public function scopeNotCancelled($query)
@@ -339,22 +374,22 @@ class Subscription extends Model
         });
     }
 
-
     /**
      * Filter query by not cancelled.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder $query
-     * @param int $days
+     * @param  Builder  $query
+     * @param  int  $days
      * @return void
      */
     public function scopeExpiresInDays($query, $days = 1)
     {
-        $query->active()->whereBetween('ends_at', [Carbon::createMidnightDate(), Carbon::createMidnightDate()->addDays($days)]);
+        $query->active()->whereBetween('ends_at',
+            [Carbon::createMidnightDate(), Carbon::createMidnightDate()->addDays($days)]);
     }
 
     /**
      * @param $interval
-     * @return \Carbon\CarbonInterval
+     * @return CarbonInterval
      */
     public function getIntervalAttribute($interval)
     {
@@ -366,46 +401,15 @@ class Subscription extends Model
         $this->attributes['interval'] = $interval->forHumans();
     }
 
-
     /**
      * Filter query by ended.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder $query
+     * @param  Builder  $query
      * @return void
      */
     public function scopeEnded($query)
     {
         $query->cancelled()->notOnGracePeriod();
-    }
-
-    /**
-     * @return int
-     */
-    public function getDaysUsed()
-    {
-        if ($this->starts_at->isFuture()) {
-            return 0;
-        } else if (is_null($this->ends_at)) {
-            return $this->starts_at->diffInDays();
-        } else {
-            return $this->ends_at->sub($this->interval)->diffInDays();
-        }
-    }
-
-    /**
-     * @return float|int
-     */
-    public function usageLeft()
-    {
-        return ($this->interval->totalDays - $this->getDaysUsed()) / $this->interval->totalDays;
-    }
-
-    /**
-     * @return Money
-     */
-    public function lastPaid()
-    {
-        return $this->transactions()->where('amount', '<=', 0)->orderByDesc('id')->first()->amount->absolute();
     }
 
 }

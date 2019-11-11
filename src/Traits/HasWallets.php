@@ -6,6 +6,7 @@ use Money\Currency;
 use Money\Money;
 use Zek\Abone\Abone;
 use Zek\Abone\Builders\TransactionBuilder;
+use Zek\Abone\Exceptions\InvalidAmount;
 use Zek\Abone\Models\Wallet;
 
 trait HasWallets
@@ -45,9 +46,9 @@ trait HasWallets
     }
 
     /**
-     * @param Money $money
+     * @param  Money  $money
      * @return TransactionBuilder
-     * @throws \Zek\Abone\Exceptions\InvalidAmount
+     * @throws InvalidAmount
      */
     public function newTransaction(Money $money)
     {

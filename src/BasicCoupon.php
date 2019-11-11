@@ -23,8 +23,8 @@ class BasicCoupon implements Coupon
     private $recurring;
 
     /**
-     * @param string|Money $amount
-     * @param bool $recurring
+     * @param  string|Money  $amount
+     * @param  bool  $recurring
      */
     public function __construct($amount, bool $recurring = false)
     {
@@ -44,7 +44,7 @@ class BasicCoupon implements Coupon
 
     /**
      * Mark coupon as used
-     * @param array $options
+     * @param  array  $options
      */
     public function markAsUsed(array $options = []): void
     {
@@ -64,8 +64,8 @@ class BasicCoupon implements Coupon
     /**
      * Return a percentage or discount amount as Money
      *
-     * @param Money $price
-     * @param array $options
+     * @param  Money  $price
+     * @param  array  $options
      * @return Money
      */
     public function getDiscountAmount(Money $price, array $options = []): Money
